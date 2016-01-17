@@ -5,23 +5,32 @@ module: java_property_file
 author: U H u@h 
 short_descripton:  Updates property files in java format
 description:
-    - Parsing logic by Kishan Thomas <kishan@hackorama.com> \
-Given a route prefix, check to see if route exists. \
-If the route exists, then do nothing. If route does not exist \
-the module will exit with an error.
+    - Parsing logic by Kishan Thomas <kishan@hackorama.com> 
 options:
-    prefix:
+    dest:
         description:
-            - route to check.
+            - property file path
         required: true
-    timeout:
+    option:
         description:
-            - timeout interval. if route is not found by the \
-time timeout kicks in then exit module
+            - property to update
+        required: true
+    value:
+        description:
+            - property value to set
+        required: true
+    backup:
+        description:
+            - Create a backup file including the timestamp information so you can get
+                    the original file back if you somehow clobbered it incorrectly.
+        required: true
+        default: "no"
+        choices: [ "yes", "no" ]
 '''
 
 def fromStringWithChanges(data, changes):
-    """Read the key, element pairs from a java properties file
+    """Read the key, element pairs from a java properties file updating
+    property values
 
     Follows the file format 'http://docs.oracle.com/javase/6/docs/api/
     java/util/Properties.html#load(java.io.Reader)' and tested against
@@ -29,7 +38,7 @@ def fromStringWithChanges(data, changes):
 
     Args:
        data: property file contents
-       changes: dics containing key/value pair to change
+       changes: dict containing key/value pairs to change
     Returns:
        prop_dict: property parsed and updated
        raw_string: properyfile with updates
@@ -88,12 +97,16 @@ def fromStringWithChanges(data, changes):
 def main():
     module = AnsibleModule(
         argument_spec={
-          'dest': {'required': True},
+          'dest':   {'required': True},
           'option': {'required': True},
-          'value': {'required': True}
-        }
+          'value':  {'required': True},
+          'backup': {'default': 'no', 'type': 'bool'}
+        },
+        supports_check_mode = True
     )
+
     filename = os.path.expanduser(module.params['dest'])
+    backup = module.params['backup']
 
     if not os.path.exists(filename):
        module.fail_json(msg="Destination file %s does not exist" % filename)
@@ -109,22 +122,25 @@ def main():
 
     result = fromStringWithChanges(prop_data, {module.params['option']: module.params['value']})
 
-    prop_file = None
-    try:
-      prop_file = open(filename, 'w')
-      prop_file.write(result.raw_string)
-    except Exception as e:
-      module.fail_json(msg="Failed writing to %s: %s" % (filename, e))
-    finally:
-      prop_file.close()
+    changed = prop_data != result.raw_string
+    if changed and not module.check_mode:
+       if backup:
+         module.backup_local(filename)
+       prop_file = None
+       try:
+         prop_file = open(filename, 'w')
+         prop_file.write(result.raw_string)
+       except Exception as e:
+         module.fail_json(msg="Failed writing to %s: %s" % (filename, e))
+       finally:
+         prop_file.close()
 
-    module.exit_json(changed=False, msg="Destination file %s updated" % filename)
+    module.exit_json(changed=changed, msg="OK")
 
 import re
 import collections
 import StringIO
 import q
-import traceback
 import os
 
 from ansible.module_utils.basic import *
