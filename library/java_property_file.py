@@ -90,9 +90,7 @@ def fromStringWithChanges(data, changes):
         else:
           raw_string = raw_string + natural_line
         natural_line = buf.readline()
-    return_value = collections.namedtuple('return_value', ['prop_dict', 'raw_string'])
-    return return_value(result, raw_string)
-
+    return collections.namedtuple('return_value', ['prop_dict', 'raw_string'])(result, raw_string)
 
 def main():
     module = AnsibleModule(
