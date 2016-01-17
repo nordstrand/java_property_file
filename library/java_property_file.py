@@ -1,3 +1,4 @@
+#!/usr/bin/python
 DOCUMENTATION = '''
 ---
 module: java_property_file 
@@ -83,27 +84,48 @@ def fromStringWithChanges(data, changes):
     return_value = collections.namedtuple('return_value', ['prop_dict', 'raw_string'])
     return return_value(result, raw_string)
 
+
 def main():
     module = AnsibleModule(
-        argument_spec=dict(
-            dest=dict(required=True, type='str'),
-            option=dict(required=True, type='str'),
-            value=dict(required=True, type='str'),
-        ),
+        argument_spec={
+          'dest': {'required': True},
+          'option': {'required': True},
+          'value': {'required': True}
+        }
     )
+    filename = os.path.expanduser(module.params['dest'])
 
-    # function runs a check.
-    # If after timeout it will return false
-    return_val = check_if_route_exists(module)
-    if return_val is True:
-        module.exit_json(changed=False, msg="Route Found")
-    else:
-        module.fail_json(msg="Route not Found. Check Routing Configuration")
+    if not os.path.exists(filename):
+       module.fail_json(msg="Destination file %s does not exist" % filename)
+
+    prop_file = None
+    try:
+      prop_file = open(filename, 'r')
+      prop_data = prop_file.read()
+    except Exception as e:
+      module.fail_json(msg="Failed reading from %s: %s" % (filename, e))
+    finally:
+      prop_file.close()
+
+    result = fromStringWithChanges(prop_data, {module.params['option']: module.params['value']})
+
+    prop_file = None
+    try:
+      prop_file = open(filename, 'w')
+      prop_file.write(result.raw_string)
+    except Exception as e:
+      module.fail_json(msg="Failed writing to %s: %s" % (filename, e))
+    finally:
+      prop_file.close()
+
+    module.exit_json(changed=False, msg="Destination file %s updated" % filename)
 
 import re
 import collections
 import StringIO
+import q
+import traceback
+import os
 
-
-if __name__ == '__main__':
-    main()
+from ansible.module_utils.basic import *
+main()
