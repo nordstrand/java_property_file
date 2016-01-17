@@ -138,7 +138,6 @@ def main():
 import re
 import collections
 import StringIO
-import q
 import os
 
 from ansible.module_utils.basic import *
