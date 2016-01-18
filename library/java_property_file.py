@@ -56,7 +56,7 @@ def fromStringWithChanges(data, changes):
     COMMENT_LINE = re.compile('\s*[#!].*') # starts with #|! ignore white space
     MULTI_LINE = re.compile(r'.*[\\]\s*$') # ending with '\' ignore white space
     # non escaped  =|:|' ', include surrounding non escaped white space
-    SPLIT_DELIM = re.compile(r'(?<!\\)\s*(?<!\\)[=: ]\s*')
+    SPLIT_DELIM = re.compile(ur'(?<!\\)\s*(?<!\\)[=: ]\s*', re.UNICODE)
     # match escape characters '\', except escaped '\\' and unicode escape '\u'
     VALID_ESC_DELIM = r'(?<!\\)[\\](?!u)'
     DEFAULT_ELEMENT = ''
@@ -80,10 +80,9 @@ def fromStringWithChanges(data, changes):
           if len(pair) == 1: pair.append(DEFAULT_ELEMENT)
           pair = [re.sub(VALID_ESC_DELIM, '', item) for item in pair]
           pair = [re.sub(ESCAPED_ESC_DELIM, ESC_DELIM, item) for item in pair]
-          pair = [unicode(item, 'unicode_escape') for item in pair] 
           if pair[0] in changes:
             pair[1] = changes[pair[0]]
-            raw_string = raw_string + pair[0] + "=" + pair[1] + '\n'
+            raw_string = raw_string + pair[0] + "=" + pair[1] + u'\n'
           else:
             raw_string = raw_string + raw_line
           result[pair[0]] = pair[1] # add key, element to result dict
@@ -111,7 +110,7 @@ def main():
 
     prop_file = None
     try:
-      prop_file = open(filename, 'r')
+      prop_file = codecs.open(filename, encoding='utf-8') 
       prop_data = prop_file.read()
     except Exception as e:
       module.fail_json(msg="Failed reading from %s: %s" % (filename, e))
@@ -126,7 +125,7 @@ def main():
          module.backup_local(filename)
        prop_file = None
        try:
-         prop_file = open(filename, 'w')
+         prop_file = codecs.open(filename, 'w', 'utf-8')
          prop_file.write(result.raw_string)
        except Exception as e:
          module.fail_json(msg="Failed writing to %s: %s" % (filename, e))
@@ -139,7 +138,8 @@ import re
 import collections
 import StringIO
 import os
-
+import codecs
 from ansible.module_utils.basic import *
+
 if __name__ == '__main__':
   main()
