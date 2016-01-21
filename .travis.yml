@@ -5,4 +5,4 @@ python:
 # install: "pip install -r requirements.txt"
 # # command to run tests
 install: pip install ansible
-script: pwd; find . -name test.py; PYTHONPATH=$(pwd) python -m test.test
+script: python -m test.test
